@@ -2317,18 +2317,17 @@ Enact a temp Basal or a temp target */
 
 /* */
 
-"Upper Delta limit in mg/dl for B30" = "Upper Delta limit in mg/dl for B30";
+"Upper Delta limit" = "Upper Delta limit";
 
 /* */
-"B30 will only run as long as BG delta stays below that level, if above regular autoISF takes over. Default is 8 mg/dl." = "B30 will only run as long as BG delta stays below that level, if above regular autoISF takes over. Default is 8 mg/dl.";
+"SMBs will be diabled when under this limit, while a B30 Basal rate is running. Default is 8 mg/dl (0.5 mmol/l)." = "SMBs will be diabled when under this limit, while a B30 Basal rate is running. Default is 8 mg/dl (0.5 mmol/l).";
 
 /* */
 
-"Upper BG limit in mg/dl for B30" = "Upper BG limit in mg/dl for B30";
-
+"Upper BG limit" = "Upper BG limit";
 
 /* */
-"B30 will only run as long as BG stays underneath that level, if above regular autoISF takes over. Default is 130 mg/dl." = "B30 will only run as long as BG stays underneath that level, if above regular autoISF takes over. Default is 130 mg/dl.";
+"SMBs will be diabled when under this limit, while a B30 Basal rate is running. Default is 130 mg/dl (7.2 mmol/l)." = "SMBs will be diabled when under this limit, while a B30 Basal rate is running. Default is 130 mg/dl (7.2 mmol/l).";
 
 /* */
 

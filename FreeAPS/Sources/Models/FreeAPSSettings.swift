@@ -83,6 +83,9 @@ struct FreeAPSSettings: JSON, Equatable {
     var enableBGacceleration: Bool = true
     var bgAccelISFweight: Decimal = 0
     var bgBrakeISFweight: Decimal = 0.10
+    var iobThresholdPercent: Decimal = 100
+    var autoisf_max: Decimal = 1.2
+    var autoisf_min: Decimal = 0.8
     // B30
     var use_B30 = false
     var iTime_Start_Bolus: Decimal = 1.5
@@ -92,7 +95,6 @@ struct FreeAPSSettings: JSON, Equatable {
     var b30upperdelta: Decimal = 8
     var b30factor: Decimal = 5
     var b30_duration: Decimal = 30
-    var smbEnabled: Bool = false
     // Keto protection
     var ketoProtect: Bool = false
     var variableKetoProtect: Bool = false
@@ -404,10 +406,6 @@ extension FreeAPSSettings: Decodable {
             settings.use_B30 = use_B30
         }
 
-        if let smbEnabled = try? container.decode(Bool.self, forKey: .smbEnabled) {
-            settings.smbEnabled = smbEnabled
-        }
-
         if let smbDeliveryRatioBGrange = try? container.decode(Decimal.self, forKey: .smbDeliveryRatioBGrange) {
             settings.smbDeliveryRatioBGrange = smbDeliveryRatioBGrange
         }
@@ -472,11 +470,23 @@ extension FreeAPSSettings: Decodable {
             settings.b30_duration = b30_duration
         }
 
-        // Auto ISF Keto Protection
-        if let ketoProtectBasalPercent = try? container.decode(Decimal.self, forKey: .ketoProtectBasalPercent) {
-            settings.ketoProtectBasalPercent = ketoProtectBasalPercent
+        if let b30_duration = try? container.decode(Decimal.self, forKey: .b30_duration) {
+            settings.b30_duration = b30_duration
         }
 
+        if let iobThresholdPercent = try? container.decode(Decimal.self, forKey: .iobThresholdPercent) {
+            settings.iobThresholdPercent = iobThresholdPercent
+        }
+
+        if let autoisf_max = try? container.decode(Decimal.self, forKey: .autoisf_max) {
+            settings.autoisf_max = autoisf_max
+        }
+
+        if let autoisf_min = try? container.decode(Decimal.self, forKey: .autoisf_min) {
+            settings.autoisf_min = autoisf_min
+        }
+
+        // Auto ISF Keto Protection
         if let ketoProtectBasalAbsolut = try? container.decode(Decimal.self, forKey: .ketoProtectBasalAbsolut) {
             settings.ketoProtectBasalAbsolut = ketoProtectBasalAbsolut
         }
