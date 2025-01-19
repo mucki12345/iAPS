@@ -1,6 +1,7 @@
 //для enact/smb-suggested.json параметры: monitor/iob.json monitor/temp_basal.json monitor/glucose.json settings/profile.json settings/autosens.json --meal monitor/meal.json --microbolus --reservoir monitor/reservoir.json
 
-function generate(iob, currenttemp, glucose, profile, autosens = null, meal = null, microbolusAllowed = true, reservoir = null, clock, dynamicVariables, pumpHistory) {
+
+function generate(iob, currenttemp, glucose, profile, autosens = null, meal = null, microbolusAllowed = true, reservoir = null, clock, pumpHistory) {
     // Needs to be updated here due to time format).
     clock = new Date();
     
@@ -19,8 +20,10 @@ function generate(iob, currenttemp, glucose, profile, autosens = null, meal = nu
         meal_data = meal;
     }
     
+    const dynamicVariables = profile.dynamicVariables || { } ;
+    
     // Overrides
-    if (dynamicVariables && dynamicVariables.useOverride) {
+    if (dynamicVariables.useOverride) {
         const factor = dynamicVariables.overridePercentage / 100;
         if (factor != 1) {
             // Basal has already been adjusted in prepare/profile.js
@@ -113,6 +116,8 @@ function generate(iob, currenttemp, glucose, profile, autosens = null, meal = nu
         console.log("Basal Rate set by middleware or AIMI to " + profile.basal_rate + " U/h.");
     }
     
+    /* For testing replace with:
+    return test(glucose_status, currenttemp, iob, profile, autosens_data, meal_data, freeaps_basalSetTemp, microbolusAllowed, reservoir_data, clock); */
     return freeaps_determineBasal(glucose_status, currenttemp, iob, profile, autosens_data, meal_data, freeaps_basalSetTemp, microbolusAllowed, reservoir_data, clock);
 }
 

@@ -17,6 +17,9 @@ extension AutoISF {
         @Environment(\.colorScheme) var colorScheme
         @Environment(\.sizeCategory) private var fontSize
 
+        @Environment(\.dismiss) private var dismiss
+
+
         @FetchRequest(
             entity: Reasons.entity(),
             sortDescriptors: [NSSortDescriptor(key: "date", ascending: false)],
@@ -26,14 +29,15 @@ extension AutoISF {
         private var formatter: NumberFormatter {
             let formatter = NumberFormatter()
             formatter.numberStyle = .decimal
-            formatter.decimalSeparator = "." // Homogenize as the ratios are always formatted using "."
+
+
             return formatter
         }
 
         private var glucoseFormatter: NumberFormatter {
             let formatter = NumberFormatter()
             formatter.numberStyle = .decimal
-            formatter.decimalSeparator = "."
+
             if state.settingsManager.settings.units == .mmolL {
                 formatter.maximumFractionDigits = 1
                 formatter.minimumFractionDigits = 1
@@ -43,13 +47,6 @@ extension AutoISF {
             return formatter
         }
 
-        private var reqFormatter: NumberFormatter {
-            let formatter = NumberFormatter()
-            formatter.numberStyle = .decimal
-            formatter.decimalSeparator = "."
-            formatter.minimumFractionDigits = 2
-            return formatter
-        }
 
         private var dateFormatter: DateFormatter {
             let formatter = DateFormatter()
@@ -168,12 +165,13 @@ extension AutoISF {
                         }
 
                         HStack {
-                            Text("Auto ISF Hourly Max Change")
+
+                            Text("Dura ISF Hourly Max Change")
                                 .onTapGesture {
                                     info(
-                                        header: "Auto ISF Hourly Max Change",
-                                        body: "Rate at which ISF is reduced per hour assuming BG leveel remains at double target for that time. When value = 1.0, ISF is reduced to 50% after 1 hour of BG level at 2x target.",
-                                        useGraphics: nil
+                                        header: "Dura ISF Hourly Max Change",
+                                        body: "Rate at which ISF is reduced per hour assuming BG level remains at double target for that time. When value = 1.0, ISF is reduced to 50% after 1 hour of BG level at 2x target.",
+                          useGraphics: nil
                                     )
                                 }
                             Spacer()
@@ -474,7 +472,8 @@ extension AutoISF {
             .navigationBarTitleDisplayMode(.automatic)
 
             .sheet(isPresented: $presentHistory) {
-                history
+                AutoISFHistoryView(units: state.units)
+
             }
         }
 
@@ -549,6 +548,7 @@ extension AutoISF {
                     .fill(colorScheme == .dark ? Color(.black).opacity(0.3) : Color(.white))
             )
         }
+
 
         private var history: some View {
             VStack(spacing: 0) {
@@ -681,5 +681,6 @@ extension AutoISF {
                 .listStyle(.plain)
             }
         }
+
     }
 }

@@ -137,8 +137,13 @@ extension Decimal {
         self / GlucoseUnits.exchangeRate
     }
 
-    var rounded: Decimal {
-        Decimal(round(Double(self)))
+
+    func rounded(to scale: Int, roundingMode: NSDecimalNumber.RoundingMode = .bankers) -> Decimal {
+        var result = Decimal()
+        var localCopy = self
+        NSDecimalRound(&result, &localCopy, scale, roundingMode)
+        return result
+
     }
 }
 

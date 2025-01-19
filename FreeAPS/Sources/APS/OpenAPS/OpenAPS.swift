@@ -36,8 +36,8 @@ final class OpenAPS {
                 let preferencesData = Preferences(from: preferences)
                 var profile = self.loadFileFromStorage(name: Settings.profile)
                 let basalProfile = self.loadFileFromStorage(name: Settings.basalProfile)
-                // To do: remove this struct.
-                let dynamicVariables = self.loadFileFromStorage(name: Monitor.dynamicVariables)
+
+
                 // For other settings
                 let data = self.loadFileFromStorage(name: FreeAPS.settings)
                 let settings = FreeAPSSettings(from: data)
@@ -81,17 +81,18 @@ final class OpenAPS {
                     autosens: autosens.isEmpty ? .null : autosens,
                     meal: meal,
                     microBolusAllowed: true,
-                    reservoir: reservoir,
-                    dynamicVariables: dynamicVariables
+                    reservoir: reservoir
                 )
 
                 // Auto ISF Layer
                 if let freeAPSSettings = settings, freeAPSSettings.autoisf {
                     profile = self.autosisf(
                         glucose: glucose,
+
+                        iob: iob,
                         profile: alteredProfile,
                         autosens: autosens.isEmpty ? .null : autosens,
-                        dynamicVariables: dynamicVariables,
+
                         pumpHistory: pumpHistory
                     )
                 }
@@ -107,7 +108,8 @@ final class OpenAPS {
                     meal: meal,
                     microBolusAllowed: true,
                     reservoir: reservoir,
-                    dynamicVariables: dynamicVariables,
+
+
                     pumpHistory: pumpHistory
                 )
                 print(
@@ -129,16 +131,7 @@ final class OpenAPS {
                         {
                             suggestion = basalRate
                         }
-                        // Use Auto ISF iobThresholdPercent limit for SMBs, when applicable
-                        if let smbThreshold = self.exceedBy30Percent(
-                            settings: mySettings,
-                            suggestion: suggestion,
-                            profile: alteredProfile,
-                            iob: iob,
-                            preferences: preferencesData
-                        ) {
-                            suggestion = smbThreshold
-                        }
+
                     }
 
                     // Process any eventual middleware/B30 basal rate
@@ -338,7 +331,9 @@ final class OpenAPS {
                    let value = Bool(disabled), !value
                 {
                     reasonString.insert(
-                        contentsOf: "Autosens Ratio: \(isf)" + tddString + ", ",
+
+                        contentsOf: "Autosens Ratio: \(isf)" + tddString + ", \(reasons), ",
+
                         at: startIndex
                     )
                 } else {
@@ -398,11 +393,13 @@ final class OpenAPS {
             }
             orString += " Target \(targetGlucose ?? 0)"
 
-            let index = reasonString.firstIndex(of: ";") ?? reasonString.index(reasonString.startIndex, offsetBy: -1)
-            reasonString.insert(contentsOf: orString, at: index)
+            if let index = reasonString.firstIndex(of: ";") {
+                reasonString.insert(contentsOf: orString, at: index)
+            }
         } else if let target = targetGlucose {
-            let index = reasonString.firstIndex(of: ";") ?? reasonString.index(reasonString.startIndex, offsetBy: -1)
-            reasonString.insert(contentsOf: ", Target: \(target)", at: index)
+            if let index = reasonString.firstIndex(of: ";") {
+                reasonString.insert(contentsOf: ", Target: \(target)", at: index)
+            }
         }
 
         // SMB Delivery ratio
@@ -446,17 +443,24 @@ final class OpenAPS {
                 saveSuggestion.isf = isf as NSDecimalNumber
                 saveSuggestion.cr = cr as NSDecimalNumber
                 saveSuggestion.iob = iob as NSDecimalNumber
+                saveSuggestion.iob = iob as NSDecimalNumber
                 saveSuggestion.cob = cob as NSDecimalNumber
                 saveSuggestion.target = target as NSDecimalNumber
                 saveSuggestion.minPredBG = minPredBG as NSDecimalNumber
                 saveSuggestion.eventualBG = Decimal(suggestion.eventualBG ?? 100) as NSDecimalNumber
                 saveSuggestion.insulinReq = (suggestion.insulinReq ?? 0) as NSDecimalNumber
                 saveSuggestion.smb = (suggestion.units ?? 0) as NSDecimalNumber
-                saveSuggestion.rate = (suggestion.rate ?? 0) as NSDecimalNumber
+
                 saveSuggestion.reasons = aisfReasons
                 saveSuggestion.glucose = (suggestion.bg ?? 0) as NSDecimalNumber
                 saveSuggestion.ratio = (suggestion.sensitivityRatio ?? 1) as NSDecimalNumber
                 saveSuggestion.date = Date.now
+
+                if let rate = suggestion.rate {
+                    saveSuggestion.rate = rate as NSDecimalNumber
+                } else if let rate = readRate(comment: suggestion.reason) {
+                    saveSuggestion.rate = rate as NSDecimalNumber
+                }
 
                 if let units = readJSON(json: profile, variable: "out_units"), units.contains("mmol/L") {
                     saveSuggestion.mmol = true
@@ -517,13 +521,9 @@ final class OpenAPS {
               let basal_rate_is = readJSON(json: alteredProfile, variable: "basal_rate") else { return nil }
 
         var returnSuggestion = oref0Suggestion
-        var basal_rate = Decimal(string: basal_rate_is) ?? 0
 
-        guard let settings = storage.retrieve(OpenAPS.Settings.settings, as: PumpSettings.self) else {
-            return nil
-        }
+        let basal_rate = Decimal(string: basal_rate_is) ?? 0
 
-        basal_rate = min(basal_rate, settings.maxBasal)
 
         returnSuggestion.rate = basal_rate
         returnSuggestion.duration = 30
@@ -615,6 +615,7 @@ final class OpenAPS {
         }
         return nil
     }
+
 
     private func readBasal(_ profile: String) -> Decimal? {
         if let string = profile.components(separatedBy: ",")
@@ -925,7 +926,7 @@ final class OpenAPS {
         meal: JSON,
         microBolusAllowed: Bool,
         reservoir: JSON,
-        dynamicVariables: JSON,
+
         pumpHistory: JSON
     ) -> RawJSON {
         dispatchPrecondition(condition: .onQueue(processQueue))
@@ -934,6 +935,8 @@ final class OpenAPS {
             worker.evaluate(script: Script(name: Prepare.determineBasal))
             worker.evaluate(script: Script(name: Bundle.basalSetTemp))
             worker.evaluate(script: Script(name: Bundle.getLastGlucose))
+
+            // For testing replace with: worker.evaluate(script: Script(name: Test.test))
             worker.evaluate(script: Script(name: Bundle.determineBasal))
 
             if let middleware = self.middlewareScript(name: OpenAPS.Middleware.determineBasal) {
@@ -952,7 +955,7 @@ final class OpenAPS {
                     microBolusAllowed,
                     reservoir,
                     Date(),
-                    dynamicVariables,
+
                     pumpHistory
                 ]
             )
@@ -1043,8 +1046,7 @@ final class OpenAPS {
         autosens: JSON,
         meal: JSON,
         microBolusAllowed: Bool,
-        reservoir: JSON,
-        dynamicVariables: JSON
+        reservoir: JSON
     ) -> RawJSON {
         dispatchPrecondition(condition: .onQueue(processQueue))
         return jsWorker.inCommonContext { worker in
@@ -1066,8 +1068,36 @@ final class OpenAPS {
                     meal,
                     microBolusAllowed,
                     reservoir,
+                    Date()
+                ]
+            )
+        }
+    }
+
+    private func autosisf(
+        glucose: JSON,
+        iob: JSON,
+        profile: JSON,
+        autosens: JSON,
+        pumpHistory: JSON
+    ) -> RawJSON {
+        dispatchPrecondition(condition: .onQueue(processQueue))
+        return jsWorker.inCommonContext { worker in
+            worker.evaluate(script: Script(name: Prepare.log))
+            worker.evaluate(script: Script(name: AutoISF.getLastGlucose))
+            if let aisf = self.aisfScript(name: OpenAPS.AutoISF.autoisf) {
+                worker.evaluate(script: aisf)
+            }
+
+            return worker.call(
+                function: Function.generate,
+                with: [
+                    iob,
+                    profile,
+                    autosens,
+                    glucose,
                     Date(),
-                    dynamicVariables
+                    pumpHistory
                 ]
             )
         }

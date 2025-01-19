@@ -54,6 +54,13 @@ extension OverrideProfilesConfig {
             return formatter
         }
 
+        private var higherPrecisionFormatter: NumberFormatter {
+            let formatter = NumberFormatter()
+            formatter.numberStyle = .decimal
+            formatter.maximumFractionDigits = 2
+            return formatter
+        }
+
         var presetPopover: some View {
             Form {
                 Section {
@@ -86,6 +93,7 @@ extension OverrideProfilesConfig {
                         }.onDelete(perform: removeProfile)
                     }
                 }
+
                 Section {
                     VStack {
                         Spacer()
@@ -106,18 +114,29 @@ extension OverrideProfilesConfig {
                             }
                         ).accentColor(state.percentage >= 130 ? .red : .blue)
                         Spacer()
-                        Toggle(isOn: $state._indefinite) {
-                            Text("Enable indefinitely")
-                        }
+                    }
+                }
+                header: { Text("Insulin") }
+                footer: {
+                    Text(
+                        "Your profile basal insulin will be adjusted with the override percentage and your profile ISF and CR will be inversly adjusted with the percentage."
+                    )
+                }
+
+                Section {
+                    Toggle(isOn: $state._indefinite) {
+                        Text("Enable indefinitely")
                     }
                     if !state._indefinite {
                         HStack {
                             Text("Duration")
-                            DecimalTextField("0", value: $state.duration, formatter: formatter, cleanInput: false)
+                            DecimalTextField("0", value: $state.duration, formatter: formatter)
                             Text("minutes").foregroundColor(.secondary)
                         }
                     }
+                } header: { Text("Duration") }
 
+                Section {
                     HStack {
                         Toggle(isOn: $state.override_target) {
                             Text("Override Profile Target")
@@ -126,15 +145,19 @@ extension OverrideProfilesConfig {
                     if state.override_target {
                         HStack {
                             Text("Target Glucose")
-                            DecimalTextField("0", value: $state.target, formatter: glucoseFormatter, cleanInput: false)
+                            DecimalTextField("0", value: $state.target, formatter: glucoseFormatter)
                             Text(state.units.rawValue).foregroundColor(.secondary)
                         }
                     }
+                } header: { Text("Target") }
+
+                Section {
                     HStack {
                         Toggle(isOn: $state.advancedSettings) {
                             Text("More options")
                         }
                     }
+
                     if state.advancedSettings {
                         HStack {
                             Toggle(isOn: $state.smbIsOff) {
@@ -149,12 +172,12 @@ extension OverrideProfilesConfig {
                         if state.smbIsAlwaysOff {
                             HStack {
                                 Text("First Hour SMBs are Off (24 hours)")
-                                DecimalTextField("0", value: $state.start, formatter: formatter, cleanInput: false)
+                                DecimalTextField("0", value: $state.start, formatter: formatter)
                                 Text("hour").foregroundColor(.secondary)
                             }
                             HStack {
                                 Text("Last Hour SMBs are Off (24 hours)")
-                                DecimalTextField("0", value: $state.end, formatter: formatter, cleanInput: false)
+                                DecimalTextField("0", value: $state.end, formatter: formatter)
                                 Text("hour").foregroundColor(.secondary)
                             }
                         }
@@ -180,8 +203,7 @@ extension OverrideProfilesConfig {
                             DecimalTextField(
                                 "0",
                                 value: $state.smbMinutes,
-                                formatter: formatter,
-                                cleanInput: false
+                                formatter: formatter
                             )
                             Text("minutes").foregroundColor(.secondary)
                         }
@@ -190,8 +212,7 @@ extension OverrideProfilesConfig {
                             DecimalTextField(
                                 "0",
                                 value: $state.uamMinutes,
-                                formatter: formatter,
-                                cleanInput: false
+                                formatter: formatter
                             )
                             Text("minutes").foregroundColor(.secondary)
                         }
@@ -208,8 +229,7 @@ extension OverrideProfilesConfig {
                                 DecimalTextField(
                                     "0",
                                     value: $state.maxIOB,
-                                    formatter: insulinFormatter,
-                                    cleanInput: false
+                                    formatter: insulinFormatter
                                 )
                                 Text("U").foregroundColor(.secondary)
                             }
@@ -456,7 +476,234 @@ extension OverrideProfilesConfig {
                             }
                         }
                     }
+                } header: { Text("Advanced Settings") }
 
+                Section {
+                    Toggle(isOn: $state.overrideAutoISF) {
+                        Text("Override Auto ISF")
+                    }
+
+                    if state.overrideAutoISF {
+                        Toggle(isOn: $state.autoISFsettings.autoisf) {
+                            Text("Enable Auto ISF")
+                        }
+
+                        if state.autoISFsettings.autoisf {
+                            Toggle(isOn: $state.autoISFsettings.enableBGacceleration) {
+                                Text("Enable BG Acceleration")
+                            }
+
+                            HStack {
+                                Text("Auto ISF Min")
+                                DecimalTextField(
+                                    "0",
+                                    value: $state.autoISFsettings.autoisf_min,
+                                    formatter: insulinFormatter
+                                )
+                            }
+
+                            HStack {
+                                Text("Auto ISF Max")
+                                DecimalTextField(
+                                    "0",
+                                    value: $state.autoISFsettings.autoisf_max,
+                                    formatter: insulinFormatter
+                                )
+                            }
+
+                            HStack {
+                                Text("SMB Delivery Ratio Minimum")
+                                DecimalTextField(
+                                    "0",
+                                    value: $state.autoISFsettings.smbDeliveryRatioMin,
+                                    formatter: insulinFormatter
+                                )
+                            }
+
+                            HStack {
+                                Text("SMB Delivery Ratio Maximum")
+                                DecimalTextField(
+                                    "0",
+                                    value: $state.autoISFsettings.smbDeliveryRatioMax,
+                                    formatter: insulinFormatter
+                                )
+                            }
+
+                            HStack {
+                                Text("SMB Delivery Ratio BG Range")
+                                BGTextField(
+                                    "0",
+                                    mgdlValue: $state.autoISFsettings.smbDeliveryRatioBGrange,
+                                    units: $state.units,
+                                    isDisabled: false
+                                )
+                            }
+
+                            HStack {
+                                Text("Dura ISF Hourly Max Change")
+                                DecimalTextField(
+                                    "0",
+                                    value: $state.autoISFsettings.autoISFhourlyChange,
+                                    formatter: insulinFormatter
+                                )
+                            }
+
+                            HStack {
+                                Text("ISF Weight for higher BGs")
+                                DecimalTextField(
+                                    "0",
+                                    value: $state.autoISFsettings.higherISFrangeWeight,
+                                    formatter: higherPrecisionFormatter
+                                )
+                            }
+
+                            HStack {
+                                Text("ISF Weight for lower BGs")
+                                DecimalTextField(
+                                    "0",
+                                    value: $state.autoISFsettings.lowerISFrangeWeight,
+                                    formatter: higherPrecisionFormatter
+                                )
+                            }
+
+                            HStack {
+                                Text("ISF Weight for postprandial BG rise")
+                                DecimalTextField(
+                                    "0",
+                                    value: $state.autoISFsettings.postMealISFweight,
+                                    formatter: higherPrecisionFormatter
+                                )
+                            }
+
+                            HStack {
+                                Text("ISF Weight while BG accelerates")
+                                DecimalTextField(
+                                    "0",
+                                    value: $state.autoISFsettings.bgAccelISFweight,
+                                    formatter: higherPrecisionFormatter
+                                )
+                            }
+
+                            HStack {
+                                Text("ISF Weight while BG deccelerates")
+                                DecimalTextField(
+                                    "0",
+                                    value: $state.autoISFsettings.bgBrakeISFweight,
+                                    formatter: higherPrecisionFormatter
+                                )
+                            }
+
+                            HStack {
+                                Text("Max IOB Threshold Percent")
+                                DecimalTextField(
+                                    "0",
+                                    value: $state.autoISFsettings.iobThresholdPercent,
+                                    formatter: insulinFormatter
+                                )
+                            }
+
+                            Toggle(isOn: $state.autoISFsettings.use_B30) {
+                                Text("Activate AIMI B30")
+                            }
+
+                            if state.autoISFsettings.use_B30 {
+                                HStack {
+                                    Text("Minimum Start Bolus size")
+                                    DecimalTextField(
+                                        "0",
+                                        value: $state.autoISFsettings.iTime_Start_Bolus,
+                                        formatter: insulinFormatter
+                                    )
+                                }
+
+                                HStack {
+                                    Text("Target Level for B30 to be enacted")
+                                    BGTextField(
+                                        "0",
+                                        mgdlValue: $state.autoISFsettings.b30targetLevel,
+                                        units: $state.units,
+                                        isDisabled: false
+                                    )
+                                }
+
+                                HStack {
+                                    Text("Upper SMB limit")
+                                    BGTextField(
+                                        "0",
+                                        mgdlValue: $state.autoISFsettings.b30upperLimit,
+                                        units: $state.units,
+                                        isDisabled: false
+                                    )
+                                }
+
+                                HStack {
+                                    Text("Upper Delta SMB limit")
+                                    BGTextField(
+                                        "0",
+                                        mgdlValue: $state.autoISFsettings.b30upperdelta,
+                                        units: $state.units,
+                                        isDisabled: false
+                                    )
+                                }
+
+                                HStack {
+                                    Text("B30 Basal rate increase factor")
+                                    DecimalTextField(
+                                        "0",
+                                        value: $state.autoISFsettings.b30factor,
+                                        formatter: insulinFormatter
+                                    )
+                                }
+
+                                HStack {
+                                    Text("Duration of increased B30 basal rate")
+                                    DecimalTextField(
+                                        "0",
+                                        value: $state.autoISFsettings.b30_duration,
+                                        formatter: insulinFormatter
+                                    )
+                                }
+                            }
+
+                            Toggle(isOn: $state.autoISFsettings.ketoProtect) {
+                                Text("Enable Keto Protection")
+                            }
+
+                            if state.autoISFsettings.ketoProtect {
+                                Toggle(isOn: $state.autoISFsettings.variableKetoProtect) {
+                                    Text("Variable Keto Protection")
+                                }
+
+                                if state.autoISFsettings.variableKetoProtect {
+                                    HStack {
+                                        Text("Safety TBR in %")
+                                        DecimalTextField(
+                                            "0",
+                                            value: $state.autoISFsettings.ketoProtectBasalPercent,
+                                            formatter: insulinFormatter
+                                        )
+                                    }
+                                } else {
+                                    Toggle(isOn: $state.autoISFsettings.ketoProtectAbsolut) {
+                                        Text("Enable Keto protection with pre-defined TBR")
+                                    }
+                                    if state.autoISFsettings.ketoProtectAbsolut {
+                                        HStack {
+                                            Text("Absolute Safety TBR")
+                                            DecimalTextField(
+                                                "0",
+                                                value: $state.autoISFsettings.ketoProtectBasalAbsolut,
+                                                formatter: higherPrecisionFormatter
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                } header: { Text("Auto ISF") }
+
+                Section {
                     HStack {
                         Button("Start") {
                             showAlert.toggle()
@@ -528,12 +775,6 @@ extension OverrideProfilesConfig {
                     }
                 }
 
-                header: { Text("Insulin") }
-                footer: {
-                    Text(
-                        "Your profile basal insulin will be adjusted with the override percentage and your profile ISF and CR will be inversly adjusted with the percentage."
-                    )
-                }
                 if state.isEnabled {
                     Section {
                         Button("Cancel Profile Override") {
@@ -649,17 +890,16 @@ extension OverrideProfilesConfig {
         }
 
         private func unChanged() -> Bool {
-            let isChanged = (
-                state.percentage == 100 && !state.override_target && !state.smbIsOff && !state
-                    .advancedSettings && !state.overrideMaxIOB
-            ) ||
-                (!state._indefinite && state.duration == 0) || (state.override_target && state.target == 0) ||
-                (
-                    state.percentage == 100 && !state.override_target && !state.smbIsOff && state.isf && state.cr && state
-                        .smbMinutes == state.defaultSmbMinutes && state.uamMinutes == state.defaultUamMinutes && !state
-                        .overrideMaxIOB
-                )
-            return isChanged
+            let percentUnchanged = state.percentage == 100
+            let targetUnchanged = !state.override_target || state.target == 0
+            let smbUnchanged = !state.smbIsOff
+            let maxIOBUnchanged = !state.advancedSettings || !state.overrideMaxIOB || state.maxIOB == 0
+            let smbMinutesUnchanged = state.smbMinutes == state.defaultSmbMinutes
+            let uamMinutesUnchanged = state.uamMinutes == state.defaultUamMinutes
+            let autoISFUnchanged = !state.overrideAutoISF
+
+            return percentUnchanged && targetUnchanged && smbUnchanged && maxIOBUnchanged && smbMinutesUnchanged &&
+                uamMinutesUnchanged && autoISFUnchanged
         }
 
         private func removeProfile(at offsets: IndexSet) {
